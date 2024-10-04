@@ -1,34 +1,17 @@
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.
-
 #include <Microsoft_HidForWindows.h>
 #include <Adafruit_NeoPixel.h>
-
-//
-// Adafruit NeoPixel-Shield - 40 RGB/W - https://www.adafruit.com/product/3053
-//
-
-// NeoPixel-Shield always communicates over PIN6.
-// However since the shield operates at 5V, and the SAMD-board at 3.3V, a level-shifter between board-output to shield-input was introduced.
-// This necessitated the remapping of PIN5 (board) to PIN6 (shield)
 #define NEO_PIXEL1_PIN A0
 #define NEO_PIXEL2_PIN A3
 
-// NeoPixel-Shield has 40 neopixels
-#define NEO_PIXEL_LAMP_COUNT 47
+#define LAMP_ARRAY1_COUNT 47
 
-// NeoPixel-Shield (as used) is GRBW.
-// Note: This must be determined for each NeoPixel-Shield used.
 #define NEO_PIXEL_TYPE (NEO_GRB + NEO_KHZ800)
 
-Adafruit_NeoPixel neoPixelShield = Adafruit_NeoPixel(NEO_PIXEL_LAMP_COUNT, NEO_PIXEL1_PIN, NEO_PIXEL_TYPE);
+Adafruit_NeoPixel ledStrip1 = Adafruit_NeoPixel(LAMP_ARRAY1_COUNT, NEO_PIXEL1_PIN, NEO_PIXEL_TYPE);
 
-// UpdateLatency for all Lamps set to 4msec as it just seems reasonable.
 #define NEO_PIXEL_LAMP_UPDATE_LATENCY (0x04)
 
-// The Host needs to know the location of every Lamp in the LampArray (X/Y/Z position) and other metadata.
-// See "26.7 LampArray Attributes and Interrogation" https://usb.org/sites/default/files/hut1_4.pdf#page=336
-static LampAttributes neoPixelShieldLampAttributes[] PROGMEM = {
+static LampAttributes LampAttributes1[] PROGMEM = {
   // All positions in millimeters from upper-left corner of device.
   // All times in milliseconds.
   // Id  X     Y     Z     Latency                        Purposes           RED   GRN   BLUE  GAIN  PROGAMMBLE?           KEY
@@ -80,42 +63,39 @@ static LampAttributes neoPixelShieldLampAttributes[] PROGMEM = {
   { 0x2D, 0x168, 0x168, 0x00, NEO_PIXEL_LAMP_UPDATE_LATENCY, LampPurposeAccent, 0xFF, 0xFF, 0xFF, 0x01, LAMP_IS_PROGRAMMABLE, 0x00 },
   { 0x2E, 0x168, 0x178, 0x00, NEO_PIXEL_LAMP_UPDATE_LATENCY, LampPurposeAccent, 0xFF, 0xFF, 0xFF, 0x01, LAMP_IS_PROGRAMMABLE, 0x00 },
 };
-static_assert(((sizeof(neoPixelShieldLampAttributes) / sizeof(LampAttributes)) == NEO_PIXEL_LAMP_COUNT), "neoPixelShieldLampAttributes must have NEO_PIXEL_LAMP_COUNT items.");
+static_assert(((sizeof(LampAttributes1) / sizeof(LampAttributes)) == LAMP_ARRAY1_COUNT), "LampAttributes1 must have LAMP_ARRAY1_COUNT items.");
 
 // All lengths in millimeters.
 // All times in milliseconds.
-Microsoft_HidLampArray lampArray = Microsoft_HidLampArray(NEO_PIXEL_LAMP_COUNT, 360, 376, 1, LampArrayKindPeripheral, 33, neoPixelShieldLampAttributes);
+Microsoft_HidLampArray lampArray1 = Microsoft_HidLampArray(LAMP_ARRAY1_COUNT, 360, 376, 1, LampArrayKindPeripheral, 33, LampAttributes1);
 
-// When the LampArray is in Autonomous-Mode, displays solid blue.
-uint32_t lampArrayAutonomousColor = neoPixelShield.Color(0, 0, 0);
+uint32_t lampArrayAutonomousColor = ledStrip1.Color(0, 0, 0);
 
 void setup() {
-  SerialUSB.begin(9600);
-  // Initialize the NeoPixel library.
-  neoPixelShield.begin();
-  neoPixelShield.clear();
 
-  // Always initially in Autonomous-Mode.
-  neoPixelShield.fill(lampArrayAutonomousColor, 0, NEO_PIXEL_LAMP_COUNT - 1);
-  neoPixelShield.show();
+  ledStrip1.begin();
+  ledStrip1.clear();
+
+  ledStrip1.fill(lampArrayAutonomousColor, 0, LAMP_ARRAY1_COUNT - 1);
+  ledStrip1.show();
 }
 
 void loop() {
-  LampArrayColor currentLampArrayState[NEO_PIXEL_LAMP_COUNT];
-  bool isAutonomousMode = lampArray.getCurrentState(currentLampArrayState);
+  LampArrayColor currentLampArrayState[LAMP_ARRAY1_COUNT];
+  bool isAutonomousMode = lampArray1.getCurrentState(currentLampArrayState);
   bool update = false;
-  for (uint16_t i = 0; i < NEO_PIXEL_LAMP_COUNT; i++) {
+  for (uint16_t i = 0; i < LAMP_ARRAY1_COUNT; i++) {
     uint32_t newColor = isAutonomousMode ? lampArrayAutonomousColor : lampArrayColorToNeoPixelColor(currentLampArrayState[i]);
-    if (newColor != neoPixelShield.getPixelColor(i)) {
-      neoPixelShield.setPixelColor(i, newColor);
+    if (newColor != ledStrip1.getPixelColor(i)) {
+      ledStrip1.setPixelColor(i, newColor);
       update = true;
     }
   }
   if (update) {
-    neoPixelShield.show();
+    ledStrip1.show();
   }
 }
 
 uint32_t lampArrayColorToNeoPixelColor(LampArrayColor lampArrayColor) {
-  return neoPixelShield.Color(lampArrayColor.RedChannel, lampArrayColor.GreenChannel, lampArrayColor.BlueChannel);
+  return ledStrip1.Color(lampArrayColor.RedChannel, lampArrayColor.GreenChannel, lampArrayColor.BlueChannel);
 }
